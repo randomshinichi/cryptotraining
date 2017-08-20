@@ -1,0 +1,5 @@
+data/
+__pycache__
+backtrader-quickstart.py
+*.ipynb
+
