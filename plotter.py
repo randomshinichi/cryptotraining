@@ -1,12 +1,15 @@
-from time import sleep
+# %matplotlib  #  for interactive plotting within jupyter!
 import sys
-import utils
+from time import sleep
 from collections import deque
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
-from matplotlib.finance import candlestick_ohlc, candlestick2_ohlc
+from matplotlib.finance import candlestick_ohlc
+
+from utils import open_json
+
 
 class Ichimoku:
     colours = {
@@ -46,21 +49,23 @@ class Ichimoku:
         return None
 
     def update_df(self, i, tenkan, kijun, chikou, senkou_a, senkou_b):
-        self.df_.loc[i, 'tenkan_sen'] = tenkan
-        self.df_.loc[i, 'kijun_sen'] = kijun
         if i - 26 >= 0:
             self.df_.loc[i - 26, 'chikou_span'] = chikou
-        self.df_.loc[i + 26, 'senkou_a'] = senkou_a
-        self.df_.loc[i + 26, 'senkou_b'] = senkou_b
+
+        self.df_.loc[i, ['tenkan_sen', 'kijun_sen']] = (tenkan, kijun)
+        self.df_.loc[i + 26, ['senkou_a', 'senkou_b']] = (senkou_a, senkou_b)
 
 
     def run(self):
         while self.i < len(self.df):
-            self.tenkan_highs.append(self.df.iloc[self.i]['high'])
-            self.tenkan_lows.append(self.df.iloc[self.i]['low'])
+            hi = self.df.loc[self.i, 'high']
+            lo = self.df.loc[self.i, 'low']
+            
+            self.tenkan_highs.append(hi)
+            self.tenkan_lows.append(lo)
 
-            self.kijun_highs.append(self.df.iloc[self.i]['high'])
-            self.kijun_lows.append(self.df.iloc[self.i]['low'])
+            self.kijun_highs.append(hi)
+            self.kijun_lows.append(lo)
             tenkan = self.avg(self.tenkan_highs, self.tenkan_lows)
             kijun = self.avg(self.kijun_highs, self.kijun_lows)
 
@@ -69,12 +74,12 @@ class Ichimoku:
             else:
                 senkou_a = None
 
-            self.senkou_b_highs.append(self.df.iloc[self.i]['high'])
-            self.senkou_b_lows.append(self.df.iloc[self.i]['low'])
+            self.senkou_b_highs.append(hi)
+            self.senkou_b_lows.append(lo)
 
             senkou_b = self.avg(self.senkou_b_highs, self.senkou_b_lows)
 
-            chikou = self.df.iloc[self.i]['close']
+            chikou = self.df.loc[self.i, 'close']
 
             self.update_df(self.i, tenkan, kijun, chikou, senkou_a, senkou_b)
             self.i += 1
@@ -84,7 +89,7 @@ class Ichimoku:
         window = self.df_.copy()[i1:i2+26]
 
         # need to delete chikou_span data from the future and past 26 days
-        window['chikou_span'].iloc[-52:] = np.nan
+        window.loc[i2-26:, 'chikou_span'] = np.nan
 
         # we have 26 extra rows from the future with data we don't want to see.
         # delete all future price data if they're not in columns senkou_a, senkou_b
@@ -108,7 +113,6 @@ class Display:
         self.df = self.source.window(self.left, self.right)
 
     def on_keyboard(self, event):
-        candle_width = 0.2
         if event.key == 'right':
             self.update_window(1)
         elif event.key == 'left':
@@ -158,11 +162,8 @@ class Display:
         plt.gcf().canvas.draw()
 
 filename = sys.argv[1]
-datareader = utils.DataReader(filename)
 
-
-raw_data = datareader.copy()
-ichi = Ichimoku(raw_data)
+ichi = Ichimoku(open_json(filename))
 print("running Ichimoku")
 ichi.run()
 print("initializing display")
