@@ -1,15 +1,12 @@
 from time import sleep
+import sys
 import utils
 from collections import deque
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as md
 from matplotlib.finance import candlestick_ohlc, candlestick2_ohlc
-
-pd.options.display.max_rows=1000
-filename = 'data/USDT_BTC-1d.json.gz'
-datareader = utils.DataReader(filename)
-
 
 class Ichimoku:
     colours = {
@@ -97,9 +94,10 @@ class Ichimoku:
 class Display:
     def __init__(self, source):
         self.left = 0
-        self.right = 100
+        self.right = 150
         self.source = source
         self.df = self.source.window(self.left, self.right)
+        self.candle_width = 0.2
 
         self.fig, self.ax = plt.subplots(1, 1)
 
@@ -110,14 +108,23 @@ class Display:
         self.df = self.source.window(self.left, self.right)
 
     def on_keyboard(self, event):
+        candle_width = 0.2
         if event.key == 'right':
             self.update_window(1)
         elif event.key == 'left':
             self.update_window(-1)
         elif event.key == 'alt+right':
-            self.update_window(100)
+            self.update_window(3)
         elif event.key == 'alt+left':
-            self.update_window(-100)
+            self.update_window(-3)
+        elif event.key == 'up':
+            self.update_window(50)
+        elif event.key == 'down':
+            self.update_window(-50)
+        elif event.key == 't':
+            self.candle_width -= 0.05
+        elif event.key == 'T':
+            self.candle_width += 0.05
         else:
             return
 
@@ -129,12 +136,13 @@ class Display:
 
         # Converts raw matplotlib numbers to dates
         self.ax.clear()
-        self.ax.xaxis_date()
-        self.ax.grid(color='gray', linestyle='dashed', linewidth=1)
+        xfmt = md.DateFormatter('%Y-%m-%d %H:%M')
+        self.ax.xaxis.set_major_formatter(xfmt)
+        self.ax.grid(color='#dddddd', linestyle='dashed', linewidth=1)
         self.ax.set_title(filename)
         plt.xlabel("Time")
         plt.ylabel("Price")
-        candlestick_ohlc(self.ax, self.df.values, width=0.5, colorup='g', colordown='r')
+        candlestick_ohlc(self.ax, self.df.values, width=self.candle_width, colorup='g', colordown='r')
         # Took me HOURS to figure out that I need list() otherwise ax.plot doesn't understand numpy.ndarray, and plots a vertical line
         x = list(self.df['date'].values)
         self.ax.plot(x, self.df['tenkan_sen'].values, color=self.source.colours["tenkan_sen"], linewidth=0.7)
@@ -148,6 +156,10 @@ class Display:
         plt.legend()
         plt.gcf().canvas.mpl_connect('key_press_event', self.on_keyboard)
         plt.gcf().canvas.draw()
+
+filename = sys.argv[1]
+datareader = utils.DataReader(filename)
+
 
 raw_data = datareader.copy()
 ichi = Ichimoku(raw_data)
