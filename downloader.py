@@ -13,7 +13,7 @@ times = {
 }
 
 base_url = "https://poloniex.com/public?command=returnChartData&currencyPair={}&start=0000000000&end=9999999999&period={}"
-pairs = ['BTC_ETH', 'BTC_ETC', ] # 'BTC_LTC', 'BTC_LBC', 'BTC_STR', 'BTC_ZEC', 'USDT_ETH', 'USDT_BTC', 'USDT_LTC', 'USDT_ZEC']
+pairs = ['ETH_ETC', 'BTC_ETC', 'BTC_LTC', 'BTC_LBC', 'BTC_STR', 'BTC_ZEC', 'USDT_ETH', 'USDT_BTC', 'USDT_LTC', 'USDT_ZEC']
 for p in pairs:
     for t in times:
         url = base_url.format(p, times[t])

@@ -4,9 +4,10 @@ from time import sleep
 from collections import deque
 import pandas as pd
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
-from matplotlib.finance import candlestick_ohlc
+from matplotlib.finance import candlestick_ohlc, volume_overlay3
 
 from utils import open_json
 
@@ -96,6 +97,7 @@ class Ichimoku:
         window.loc[i2:, window.columns.difference(['date', 'senkou_a', 'senkou_b'])] = np.nan
         return window
 
+
 class Display:
     def __init__(self, source):
         self.left = 0
@@ -105,6 +107,8 @@ class Display:
         self.candle_width = 0.2
 
         self.fig, self.ax = plt.subplots(1, 1)
+        self.ax.set_xlabel("Time")
+        self.ax_volume = self.ax.twinx()  # second axes for volume overlay
 
     def update_window(self, i):
         self.right += i
@@ -140,15 +144,20 @@ class Display:
 
         # Converts raw matplotlib numbers to dates
         self.ax.clear()
+        self.ax_volume.clear()
         xfmt = md.DateFormatter('%Y-%m-%d %H:%M')
         self.ax.xaxis.set_major_formatter(xfmt)
         self.ax.grid(color='#dddddd', linestyle='dashed', linewidth=1)
         self.ax.set_title(filename)
-        plt.xlabel("Time")
-        plt.ylabel("Price")
+        
+        self.ax.set_ylabel("Price")
         candlestick_ohlc(self.ax, self.df.values, width=self.candle_width, colorup='g', colordown='r')
+
+        self.ax_volume.set_position(matplotlib.transforms.Bbox([[0.125,0.1],[0.9,0.25]]))
+
         # Took me HOURS to figure out that I need list() otherwise ax.plot doesn't understand numpy.ndarray, and plots a vertical line
         x = list(self.df['date'].values)
+        self.ax_volume.bar(x, self.df['volume'].values, width=self.candle_width, color='black', align='center', alpha=0.6)
         self.ax.plot(x, self.df['tenkan_sen'].values, color=self.source.colours["tenkan_sen"], linewidth=0.7)
         self.ax.plot(x, self.df['kijun_sen'].values, color=self.source.colours["kijun_sen"], linewidth=0.7)
         self.ax.plot(x, self.df['chikou_span'].values, color=self.source.colours["chikou_span"], linewidth=0.7)
@@ -160,6 +169,7 @@ class Display:
         plt.legend()
         plt.gcf().canvas.mpl_connect('key_press_event', self.on_keyboard)
         plt.gcf().canvas.draw()
+
 
 filename = sys.argv[1]
 
