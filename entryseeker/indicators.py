@@ -28,28 +28,25 @@ class RSI:
                 rsi = 100 - (100 / (1 + rs))
                 return (row.loc['timestamp'], rsi)
 
-        for i, row in self.df.iterrows():
-            try:  # handles the 0 when there is no i-1
-                gain = 0
-                loss = 0
-                change = row['close'] - self.df.loc[i - 1, 'close']
+        for i, row in self.df[1:].iterrows():
+            gain = 0
+            loss = 0
+            change = row['close'] - self.df.loc[i - 1, 'close']
 
-                if change > 0:
-                    gain = change
-                elif change < 0:
-                    loss = abs(change)
+            if change > 0:
+                gain = change
+            elif change < 0:
+                loss = abs(change)
 
-                self.gains.append(gain)
-                self.losses.append(loss)
-            except KeyError:
-                pass
+            self.gains.append(gain)
+            self.losses.append(loss)
 
-            if self.length > i:
+            # if i < 14, keep iterating until the deques are full
+            if i < self.length:
                 continue
 
-            """ Following Code only runs after deque is full """
 
-            if self.length == i:
+            if i == self.length:
                 gain_avg = sum(self.gains) / len(self.gains)
                 losses_avg = sum(self.losses) / len(self.losses)
 
