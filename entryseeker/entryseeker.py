@@ -1,6 +1,6 @@
 import json
 from datamanager import DataManager
-from indicators import Ichimoku
+from indicators import Ichimoku, RSI
 
 
 def update_bullish_list(pairs):
@@ -22,11 +22,11 @@ def update_bullish_list(pairs):
         json.dump(historical_data, f, sort_keys=True, indent=4)
 
 
-def seek_entries(markets, record=False):
+def seek_entries_ichimoku(markets, record=False):
     bull_list = []
     for pair in markets:
         print(pair, end="\r")
-        df = dm.open(pair, '1d', until_time='2017-09-10')
+        df = dm.open(pair, '1d')
         ichi = Ichimoku(df)
         ichi.run()
         result = ichi.analyze()
@@ -40,4 +40,7 @@ def seek_entries(markets, record=False):
         update_bullish_list(bull_list)
 
 dm = DataManager()
-seek_entries(dm.bittrex_markets, record=True)
+# seek_entries(dm.bittrex_markets, record=True)
+df = dm.open('LTC/BTC', '1d')
+rsi = RSI(df)
+rsi.run()

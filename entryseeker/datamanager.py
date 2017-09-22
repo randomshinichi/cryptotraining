@@ -84,7 +84,7 @@ class DataManager:
             df.drop("timestamp", axis=1, inplace=True)
             return df
 
-        for market in dm.bittrex_markets:
+        for market in self.bittrex_markets:
             market_name = self.get_market_name(market)
             print(market_name, end="", flush=True)
 
@@ -101,4 +101,4 @@ class DataManager:
                 df = get(market_name, 'day').reset_index()
                 f.write(df.to_json(orient='records', date_format='iso'))
 
-            time.sleep(0.2)
+            time.sleep(0.5)

@@ -3,14 +3,74 @@ import pandas as pd
 import numpy as np
 
 
+class RSI:
+
+    def __init__(self, df, length=14):
+        self.df = df.reset_index()
+        self.n = {
+            "open": "open",
+            "high": "high",
+            "low": "low",
+            "close": "close",
+            "volume": "volume",
+            "basevolume": "basevolume"
+        }
+        self.length = length
+        self.candles = deque(maxlen=self.length)
+        self.gains = deque(maxlen=self.length)
+        self.losses = deque(maxlen=self.length)
+        self.gain_avg_prev = 0
+        self.losses_avg_prev = 0
+
+    def run(self):
+        def rsi(gain_avg, losses_avg):
+                rs = gain_avg / losses_avg
+                rsi = 100 - (100 / (1 + rs))
+                return (row.loc['timestamp'], rsi)
+
+        for i, row in self.df.iterrows():
+            try:  # handles the 0 when there is no i-1
+                gain = 0
+                loss = 0
+                change = row['close'] - self.df.loc[i - 1, 'close']
+
+                if change > 0:
+                    gain = change
+                elif change < 0:
+                    loss = abs(change)
+
+                self.gains.append(gain)
+                self.losses.append(loss)
+            except KeyError:
+                pass
+
+            if self.length > i:
+                continue
+
+            """ Following Code only runs after deque is full """
+
+            if self.length == i:
+                gain_avg = sum(self.gains) / len(self.gains)
+                losses_avg = sum(self.losses) / len(self.losses)
+
+            elif i > self.length:
+                gain_avg = (13 * self.gain_avg_prev + self.gains[-1]) / self.length
+                losses_avg=(13 * self.losses_avg_prev + self.losses[-1]) / self.length
+            
+            self.gain_avg_prev = gain_avg
+            self.losses_avg_prev = losses_avg
+            
+            print(rsi(gain_avg, losses_avg))
+
+
 class Ichimoku:
 
     def __init__(self, df):
         # if df has an index, we don't want it.
         # Because loc is the best way to select individual elements in the 2D
         # array, since iloc won't let you select the column.
-        self.df = df.reset_index()
-        self.n = {
+        self.df=df.reset_index()
+        self.n={
             "open": "open",
             "high": "high",
             "low": "low",
