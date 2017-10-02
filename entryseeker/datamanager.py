@@ -31,10 +31,16 @@ class DataManager:
     should be standardized in this class.
     """
 
-    def __init__(self):
+    def __init__(self, force_refresh=False):
         # bittrex_markets is from ccxt.bittrex().load_markets(). saved for
         # offline convenience
-        self.bittrex_markets = json.load(open('bittrex_markets.json'))
+        if not force_refresh:
+            self.bittrex_markets = json.load(open('bittrex_markets.json'))
+        else:
+            self.bittrex_markets = ccxt.bittrex().load_markets()
+            with open('bittrex_markets.json', 'w') as f:
+                json.dump(self.bittrex_markets, f)
+
 
     def get_market_name(self, m):
         """

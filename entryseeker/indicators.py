@@ -4,8 +4,21 @@ import numpy as np
 
 
 class RSI:
+    """
+    TODO:
+    lows_decreasing_steadily()
+    Figures out whether the lows in the RSI have been decreasing steadily. Period is configurable.
+    I don't actually need this function. Because I'm only going to buy when RSI is oversold, i.e. <30.
+    And if it's oversold, the lows have already been decreasing steadily.
+    """
 
-    def __init__(self, df, length=14):
+    def __init__(self, df, pair, length=14):
+        """
+        df = Pandas Dataframe
+        pair = Coin's name. Useful when something goes wrong in here,
+        and you need to know which coin it is.
+        """
+        self.pair = pair
         self.df = df.reset_index()
         self.n = {
             "open": "open",
@@ -21,17 +34,30 @@ class RSI:
         self.losses = deque(maxlen=self.length)
         self.gain_avg_prev = 0
         self.losses_avg_prev = 0
+        self.df['rsi'] = pd.Series(np.nan)
 
-    def run(self):
+        self.process()
+
+    def process(self):
         def rsi(gain_avg, losses_avg):
+            # Sometimes you get dirty data, especially at the beginning of a coin's life
+            try:
                 rs = gain_avg / losses_avg
-                rsi = 100 - (100 / (1 + rs))
-                return (row.loc['timestamp'], rsi)
+            except ZeroDivisionError:
+                rs = 0
+
+            rsi = 100 - (100 / (1 + rs))
+            return rsi
 
         for i, row in self.df[1:].iterrows():
             gain = 0
             loss = 0
-            change = row['close'] - self.df.loc[i - 1, 'close']
+
+            try:
+                change = row['close'] - self.df.loc[i - 1, 'close']
+            except TypeError as e:
+                print(self.pair, "NaNs encountered in the middle of valid price data")
+                change = np.nan
 
             if change > 0:
                 gain = change
@@ -45,29 +71,48 @@ class RSI:
             if i < self.length:
                 continue
 
-
             if i == self.length:
                 gain_avg = sum(self.gains) / len(self.gains)
                 losses_avg = sum(self.losses) / len(self.losses)
 
             elif i > self.length:
                 gain_avg = (13 * self.gain_avg_prev + self.gains[-1]) / self.length
-                losses_avg=(13 * self.losses_avg_prev + self.losses[-1]) / self.length
-            
+                losses_avg = (13 * self.losses_avg_prev + self.losses[-1]) / self.length
+
             self.gain_avg_prev = gain_avg
             self.losses_avg_prev = losses_avg
-            
-            print(rsi(gain_avg, losses_avg))
+
+            self.df.loc[i, 'rsi'] = rsi(gain_avg, losses_avg)
+
+    def is_oversold(self, period=1):
+        """
+        Returns whether the RSI has been <30 for the past (period) candles.
+        Because if it only returns whether the current candle's RSI is oversold,
+        that doesn't tell us much by itself.
+        """
+        window = self.df[-period:]
+        res = []  # [True, False, False, True, True]... to be ANDed later
+        for i, row in window.iterrows():
+            res.append(row['rsi'] <= 30)
+
+        return all(res)
 
 
 class Ichimoku:
 
-    def __init__(self, df):
+    def __init__(self, df, pair):
+        """
+        df = Pandas Dataframe
+        pair = Coin's name. Useful when something goes wrong in here,
+        and you need to know which coin it is.
+        """
         # if df has an index, we don't want it.
         # Because loc is the best way to select individual elements in the 2D
         # array, since iloc won't let you select the column.
-        self.df=df.reset_index()
-        self.n={
+        self.df = df.reset_index()
+        
+        self.pair = pair
+        self.n = {
             "open": "open",
             "high": "high",
             "low": "low",
@@ -92,12 +137,7 @@ class Ichimoku:
         self.df['senkou_a'] = pd.Series(np.nan)
         self.df['senkou_b'] = pd.Series(np.nan)
 
-    @staticmethod
-    def avg(highs, lows):
-        # Returns the average only if both deques are full
-        if len(highs) == highs.maxlen and len(lows) == lows.maxlen:
-            return ((max(highs) + min(lows)) / 2)
-        return None
+        self.process()
 
     def update_df(self, i, tenkan, kijun, chikou, senkou_a, senkou_b):
         if i - 26 >= 0:
@@ -106,7 +146,12 @@ class Ichimoku:
         self.df.loc[i, ['tenkan_sen', 'kijun_sen']] = (tenkan, kijun)
         self.df.loc[i + 26, ['senkou_a', 'senkou_b']] = (senkou_a, senkou_b)
 
-    def run(self):
+    def process(self):
+        def avg(highs, lows):
+            # Returns the average only if both deques are full
+            if len(highs) == highs.maxlen and len(lows) == lows.maxlen:
+                return ((max(highs) + min(lows)) / 2)
+            return None
         for i, row in self.df.iterrows():
             hi = self.df.loc[i, self.n["high"]]
             lo = self.df.loc[i, self.n["low"]]
@@ -133,7 +178,7 @@ class Ichimoku:
 
             self.update_df(i, tenkan, kijun, chikou, senkou_a, senkou_b)
 
-    def analyze(self):
+    def is_all_clear(self):
         """
         Checks if there is nothing above chikou_span.
         Then checks if tenkan > kijun > senkou a > senkou b

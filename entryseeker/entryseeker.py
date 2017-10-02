@@ -3,44 +3,35 @@ from datamanager import DataManager
 from indicators import Ichimoku, RSI
 
 
-def update_bullish_list(pairs):
-    from datetime import datetime
-    try:
-        with open('bullish_list.json', 'r') as f:
-            historical_data = json.load(f)
-    except:
-        historical_data = []
-
-    record = {
-        "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
-        "all": pairs,
-    }
-    historical_data.append(record)
-
-    with open('bullish_list.json', 'w') as f:
-        print("Saving list of bullish coins")
-        json.dump(historical_data, f, sort_keys=True, indent=4)
-
-
-def seek_entries_ichimoku(markets, record=False):
-    bull_list = []
+def seek_entries_ichimoku(markets):
     for pair in markets:
         print(pair, end="\r")
         df = dm.open(pair, '1d')
         ichi = Ichimoku(df)
-        ichi.run()
-        result = ichi.analyze()
+        result = ichi.is_all_clear()
         if result:
             print(pair, "looks good")
-            bull_list.append(pair)
         else:
             print(" " * len(pair), end="\r")
 
-    if record:
-        update_bullish_list(bull_list)
 
-dm = DataManager()
-# seek_entries(dm.bittrex_markets, record=True)
-df = dm.open('LTC/BTC', '1d')
-rsi = RSI(df)
-rsi.run()
+def seek_rsi_deals(markets, timeframe):
+    """
+    markets = dm.bittrex_markets
+    timeframe = '4h' or '1d'
+    """
+    cheapo = []
+    for pair in markets:
+        print(pair, end="\r")
+        df = dm.open(pair, timeframe)
+        rsi = RSI(df, pair)
+        if rsi.is_oversold(period=1):
+            cheapo.append(pair)
+        print(" " * len(pair), end="\r")
+    print("Cheapo? Big dip right now anyway", cheapo)
+
+
+dm = DataManager(force_refresh=False)
+# dm.download_bittrex()
+
+seek_rsi_deals(dm.bittrex_markets, '1d')
