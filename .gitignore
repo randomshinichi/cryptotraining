@@ -4,4 +4,4 @@ __pycache__
 backtrader-quickstart.py
 *.ipynb
 entryseeker/data
-entryseeker/bullish_list.json
+entryseeker/bittrex_markets.json
