@@ -1,4 +1,5 @@
 # %matplotlib  #  for interactive plotting within jupyter!
+import argparse
 import sys
 from time import sleep
 from collections import deque
@@ -9,8 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 from matplotlib.finance import candlestick_ohlc, volume_overlay3
 
-from utils import open_json
-
+from datamanager import DataManager
 
 class Ichimoku:
     colours = {
@@ -94,12 +94,12 @@ class Ichimoku:
 
         # we have 26 extra rows from the future with data we don't want to see.
         # delete all future price data if they're not in columns senkou_a, senkou_b
-        window.loc[i2:, window.columns.difference(['date', 'senkou_a', 'senkou_b'])] = np.nan
+        window.loc[i2:, window.columns.difference(['timestamp', 'senkou_a', 'senkou_b'])] = np.nan
         return window
 
 
 class Display:
-    def __init__(self, source):
+    def __init__(self, source, title=''):
         self.left = 0
         self.right = 150
         self.source = source
@@ -109,6 +109,7 @@ class Display:
         self.fig, self.ax = plt.subplots(1, 1)
         self.ax.set_xlabel("Time")
         self.ax_volume = self.ax.twinx()  # second axes for volume overlay
+        self.title = title
 
     def update_window(self, i):
         self.right += i
@@ -117,17 +118,18 @@ class Display:
         self.df = self.source.window(self.left, self.right)
 
     def on_keyboard(self, event):
+        print(event.key)
         if event.key == 'right':
             self.update_window(1)
         elif event.key == 'left':
             self.update_window(-1)
-        elif event.key == 'alt+right':
-            self.update_window(3)
-        elif event.key == 'alt+left':
-            self.update_window(-3)
         elif event.key == 'up':
-            self.update_window(50)
+            self.update_window(5)
         elif event.key == 'down':
+            self.update_window(-5)
+        elif event.key == 'pageup':
+            self.update_window(50)
+        elif event.key == 'pagedown':
             self.update_window(-50)
         elif event.key == 't':
             self.candle_width -= 0.05
@@ -148,7 +150,7 @@ class Display:
         xfmt = md.DateFormatter('%Y-%m-%d %H:%M')
         self.ax.xaxis.set_major_formatter(xfmt)
         self.ax.grid(color='#dddddd', linestyle='dashed', linewidth=1)
-        self.ax.set_title(filename)
+        self.ax.set_title(self.title)
         
         self.ax.set_ylabel("Price")
         candlestick_ohlc(self.ax, self.df.values, width=self.candle_width, colorup='g', colordown='r')
@@ -156,7 +158,7 @@ class Display:
         self.ax_volume.set_position(matplotlib.transforms.Bbox([[0.125,0.1],[0.9,0.25]]))
 
         # Took me HOURS to figure out that I need list() otherwise ax.plot doesn't understand numpy.ndarray, and plots a vertical line
-        x = list(self.df['date'].values)
+        x = list(self.df['timestamp'].values)
         self.ax_volume.bar(x, self.df['volume'].values, width=self.candle_width, color='black', align='center', alpha=0.6)
         self.ax.plot(x, self.df['tenkan_sen'].values, color=self.source.colours["tenkan_sen"], linewidth=0.7)
         self.ax.plot(x, self.df['kijun_sen'].values, color=self.source.colours["kijun_sen"], linewidth=0.7)
@@ -170,14 +172,17 @@ class Display:
         plt.gcf().canvas.mpl_connect('key_press_event', self.on_keyboard)
         plt.gcf().canvas.draw()
 
+parser = argparse.ArgumentParser()
+parser.add_argument('pair', help='BTC-LTC, BTC-NXT...')
+parser.add_argument('-t', '--timeframe', default='1d', help='4h, 1d')
+args = parser.parse_args()
 
-filename = sys.argv[1]
-
-ichi = Ichimoku(open_json(filename))
+dm = DataManager()
+ichi = Ichimoku(dm.open_plotter_friendly(args.pair, args.timeframe))
 print("running Ichimoku")
 ichi.run()
 print("initializing display")
-disp = Display(ichi)
+disp = Display(ichi, title=" ".join([args.pair, args.timeframe]))
 
 disp.plot()
 plt.show()

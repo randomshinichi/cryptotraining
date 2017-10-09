@@ -1,3 +1,4 @@
+import argparse
 import json
 from datamanager import DataManager
 from indicators import Ichimoku, RSI
@@ -30,8 +31,13 @@ def seek_rsi_deals(markets, timeframe):
         print(" " * len(pair), end="\r")
     print("Cheapo? Big dip right now anyway", cheapo)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-d', '--download', action='store_true', help='Download new price data', default=False)
+args = parser.parse_args()
 
 dm = DataManager(force_refresh=False)
-# dm.download_bittrex()
+if args.download:
+    # Download new price data
+    dm.download_bittrex()
 
 seek_rsi_deals(dm.bittrex_markets, '1d')

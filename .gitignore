@@ -3,5 +3,5 @@ data/
 __pycache__
 backtrader-quickstart.py
 *.ipynb
-entryseeker/data
-entryseeker/bittrex_markets.json
+datamanager/data
+datamanager/bittrex_markets.json

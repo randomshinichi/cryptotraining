@@ -99,7 +99,13 @@ class RSI:
 
 
 class Ichimoku:
-
+    colours = {
+        "tenkan_sen": "#0496ff",
+        "kijun_sen": "#991515",
+        "chikou_span": "#459915",
+        "senkou_a": "#3F9340",
+        "senkou_b": "#E54040"
+    }
     def __init__(self, df, pair):
         """
         df = Pandas Dataframe
