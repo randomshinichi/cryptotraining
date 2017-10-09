@@ -36,8 +36,7 @@ parser.add_argument('-d', '--download', action='store_true', help='Download new 
 args = parser.parse_args()
 
 dm = DataManager(force_refresh=False)
-if args.download:
-    # Download new price data
+if args.download:  # Download new price data
     dm.download_bittrex()
 
 seek_rsi_deals(dm.bittrex_markets, '1d')

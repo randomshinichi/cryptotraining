@@ -49,17 +49,23 @@ class DataManager:
                 json.dump(self.bittrex_markets, f)
 
 
-    def get_market_name(self, m):
+    def slash_to_dash(self, m):
         """
         Translates 1ST/BTC to BTC-1ST
+        Or, if it's already BTC-1ST, just return that
         """
-        return self.bittrex_markets[m]['id']
+        if '/' in m:
+            return self.bittrex_markets[m]['id']
+        else:
+            return m
 
-    def get_data_path(self, timeframe, pair):
+    def get_data_path(self, pair, timeframe):
         """
+        Input: 'BTC-LTC', '4h' or
+        Input: 'LTC/BTC', '4h'
         Returns '/Users/shinichi/source/cryptocoins/datamanager/data/1d/BTC-LTC.json'
         """
-        return os.path.join(self.dir_path, "data", timeframe, pair+".json")
+        return os.path.join(self.dir_path, "data", timeframe, self.slash_to_dash(pair)+".json")
 
     def open(self, pair, timeframe, from_time=None, until_time=None, matplotlib=False):
         """
@@ -68,7 +74,7 @@ class DataManager:
         from_time: '2017-09-12 12:00:00' or '2017-09-12'
         until_time: same
         """
-        path = self.get_data_path(timeframe, pair)
+        path = self.get_data_path(pair, timeframe)
         with open(path, 'r') as d:
             df = pd.read_json(d, orient='records')
 
@@ -118,21 +124,29 @@ class DataManager:
             df.drop("timestamp", axis=1, inplace=True)
             return df
 
-        for market in self.bittrex_markets:
-            market_name = self.get_market_name(market)
+        all_data = {}
+        for m in list(self.bittrex_markets.keys()):
+            pair_data = {}
+            market_name = self.slash_to_dash(m)
             print(market_name, end="", flush=True)
 
-            with open(self.get_data_path('4h', market_name), 'w') as f:
-                print(" 4h", end="", flush=True)
-                df = get(market_name, 'hour')
-                # once we've resampled, we don't want an index anymore
-                # because the index is never saved as a column with the data
-                df_4h = df.resample('4H', how=ohlc_dict).reset_index()
-                f.write(df_4h.to_json(orient='records', date_format='iso'))
+            print(" 4h", end="", flush=True)
+            df = get(market_name, 'hour')
+            # once we've resampled, we don't want an index anymore
+            # because the index is never saved as a column with the data
+            df_4h = df.resample('4H', how=ohlc_dict).reset_index()
+            pair_data["4h"] = df_4h.to_json(orient='records', date_format='iso')
 
-            with open(self.get_data_path('1d', market_name), 'w') as f:
-                print(" 1d")
-                df = get(market_name, 'day').reset_index()
-                f.write(df.to_json(orient='records', date_format='iso'))
+            print(" 1d")
+            df = get(market_name, 'day').reset_index()
+            pair_data["1d"] = df.to_json(orient='records', date_format='iso')
 
+            all_data[market_name] = pair_data
             time.sleep(0.5)
+
+        print("Writing Data")
+        for m in all_data:
+            with open(self.get_data_path(m, "4h"), 'w') as f:
+                f.write(all_data[m]["4h"])
+            with open(self.get_data_path(m, "1d"), 'w') as f:
+                f.write(all_data[m]["1d"])
