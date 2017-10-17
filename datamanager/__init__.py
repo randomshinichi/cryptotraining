@@ -48,7 +48,6 @@ class DataManager:
             with open(file_path, 'w') as f:
                 json.dump(self.bittrex_markets, f)
 
-
     def slash_to_dash(self, m):
         """
         Translates 1ST/BTC to BTC-1ST
@@ -65,7 +64,7 @@ class DataManager:
         Input: 'LTC/BTC', '4h'
         Returns '/Users/shinichi/source/cryptocoins/datamanager/data/1d/BTC-LTC.json'
         """
-        return os.path.join(self.dir_path, "data", timeframe, self.slash_to_dash(pair)+".json")
+        return os.path.join(self.dir_path, "data", timeframe, self.slash_to_dash(pair) + ".json")
 
     def open(self, pair, timeframe, from_time=None, until_time=None, matplotlib=False):
         """
@@ -106,7 +105,6 @@ class DataManager:
         df['timestamp'] = df['timestamp'].map(date2num)
         return df
 
-
     def download_bittrex(self):
         def get(m, period='day'):
             url = 'https://bittrex.com/Api/v2.0/pub/market/GetTicks?marketName={}&tickInterval={}'
@@ -118,31 +116,47 @@ class DataManager:
                 columns=bittrex_translation,
                 inplace=True
             )
+
             # For resampling, we need the index to be a DatetimeIndex
             df.set_index(pd.DatetimeIndex(df['timestamp']), inplace=True)
             # this column is already duplicated in the index
             df.drop("timestamp", axis=1, inplace=True)
+
             return df
+
+        def reset_index_and_jsonify(df):
+            """
+            Once we've resampled, we don't need the index anymore
+            Because the index is never saved as a column with the data.
+            """
+            df2 = df.reset_index()
+            return df2.to_json(orient='records', date_format='iso')
 
         all_data = {}
         for m in list(self.bittrex_markets.keys()):
-            pair_data = {}
             market_name = self.slash_to_dash(m)
             print(market_name, end="", flush=True)
 
-            print(" 4h", end="", flush=True)
-            df = get(market_name, 'hour')
-            # once we've resampled, we don't want an index anymore
-            # because the index is never saved as a column with the data
-            df_4h = df.resample('4H', how=ohlc_dict).reset_index()
-            pair_data["4h"] = df_4h.to_json(orient='records', date_format='iso')
+            print(" getting", end="", flush=True)
+            df_hourly = get(market_name, 'hour')
+            df_daily = get(market_name, 'day')
 
-            print(" 1d")
-            df = get(market_name, 'day').reset_index()
-            pair_data["1d"] = df.to_json(orient='records', date_format='iso')
+            print(" resampling", end="", flush=True)
 
-            all_data[market_name] = pair_data
-            time.sleep(0.5)
+            try:
+                pair_data = {
+                    "1h": reset_index_and_jsonify(df_hourly),
+                    "2h": reset_index_and_jsonify(df_hourly.resample('2H', how=ohlc_dict)),
+                    "4h": reset_index_and_jsonify(df_hourly.resample('4H', how=ohlc_dict)),
+                    "1d": reset_index_and_jsonify(df_daily)
+                }
+            except Exception as e:
+                print("something's wrong with {}".format(market_name), e)
+            else:
+                all_data[market_name] = pair_data
+                print(" ✓")
+
+            time.sleep(0.2)
 
         print("Writing Data")
         for m in all_data:
