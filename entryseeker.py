@@ -4,16 +4,14 @@ from datamanager import DataManager
 from indicators import Ichimoku, RSI
 
 
-def seek_entries_ichimoku(markets):
-    for pair in markets:
-        print(pair, end="\r")
-        df = dm.open(pair, '1d')
-        ichi = Ichimoku(df)
-        result = ichi.is_all_clear()
-        if result:
-            print(pair, "looks good")
-        else:
-            print(" " * len(pair), end="\r")
+class Coin:
+    """Allows for comparisons between Timeframes"""
+    pass
+
+
+class Timeframe:
+    """Holds actual price data and manages the indicators on that data"""
+    pass
 
 
 def seek_rsi_deals(markets, timeframe):
@@ -32,10 +30,11 @@ def seek_rsi_deals(markets, timeframe):
     print("Cheapo? Big dip right now anyway", cheapo)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--download', action='store_true', help='Download new price data', default=False)
+parser.add_argument('-d', '--download', action='store_true',
+                    help='Download new price data', default=False)
 args = parser.parse_args()
 
-dm = DataManager(force_refresh=False)
+dm = DataManager(force_refresh=True)
 if args.download:  # Download new price data
     dm.download_bittrex()
 
