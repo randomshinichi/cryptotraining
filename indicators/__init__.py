@@ -12,13 +12,12 @@ class RSI:
     And if it's oversold, the lows have already been decreasing steadily.
     """
 
-    def __init__(self, df, pair, length=14):
+    def __init__(self, df, length=14):
         """
         df = Pandas Dataframe
         pair = Coin's name. Useful when something goes wrong in here,
         and you need to know which coin it is.
         """
-        self.pair = pair
         self.df = df.reset_index()
         self.n = {
             "open": "open",
@@ -56,7 +55,7 @@ class RSI:
             try:
                 change = row['close'] - self.df.loc[i - 1, 'close']
             except TypeError as e:
-                print(self.pair, "NaNs encountered in the middle of valid price data")
+                # print("NaNs in price data")
                 change = np.nan
 
             if change > 0:
@@ -97,16 +96,35 @@ class RSI:
 
         return all(res)
 
+    def is_increasing(self, period=21):
+        """
+        for 1d timeframe, a good period over which this calculation
+        should be run is 21 days.
+        """
+
+        # .loc[] does not work with negative indices.
+        # So if we want the last 10 datapoints and the df is 1000 long,
+        # we need to go .loc[990:, 'rsi']
+        period_from_last = len(self.df) - period
+        window = self.df.loc[period_from_last:, 'rsi']
+
+        # split the lookup window into 2
+        window_1 = window[:round(len(window)/2)]
+        window_2 = window[round(len(window)/2):]
+
+        # if the 1st window's avg is lower than the 2nd window's, Then
+        # the RSI must have been rising, right/
+        return window_1.mean() <= window_2.mean()
 
 class Ichimoku:
-    colours = {
+    colours={
         "tenkan_sen": "#0496ff",
         "kijun_sen": "#991515",
         "chikou_span": "#459915",
         "senkou_a": "#3F9340",
         "senkou_b": "#E54040"
     }
-    def __init__(self, df, pair):
+    def __init__(self, df):
         """
         df = Pandas Dataframe
         pair = Coin's name. Useful when something goes wrong in here,
@@ -115,10 +133,9 @@ class Ichimoku:
         # if df has an index, we don't want it.
         # Because loc is the best way to select individual elements in the 2D
         # array, since iloc won't let you select the column.
-        self.df = df.reset_index()
-        
-        self.pair = pair
-        self.n = {
+        self.df=df.reset_index()
+
+        self.n={
             "open": "open",
             "high": "high",
             "low": "low",
@@ -126,31 +143,31 @@ class Ichimoku:
             "volume": "volume",
             "basevolume": "basevolume"
         }
-        self.tenkan_highs = deque(maxlen=9)
-        self.tenkan_lows = deque(maxlen=9)
+        self.tenkan_highs=deque(maxlen=9)
+        self.tenkan_lows=deque(maxlen=9)
 
-        self.kijun_highs = deque(maxlen=26)
-        self.kijun_lows = deque(maxlen=26)
+        self.kijun_highs=deque(maxlen=26)
+        self.kijun_lows=deque(maxlen=26)
 
-        self.chikou_span = deque(maxlen=26)
+        self.chikou_span=deque(maxlen=26)
 
-        self.senkou_b_highs = deque(maxlen=52)
-        self.senkou_b_lows = deque(maxlen=52)
+        self.senkou_b_highs=deque(maxlen=52)
+        self.senkou_b_lows=deque(maxlen=52)
 
-        self.df['tenkan_sen'] = pd.Series(np.nan)
-        self.df['kijun_sen'] = pd.Series(np.nan)
-        self.df['chikou_span'] = pd.Series(np.nan)
-        self.df['senkou_a'] = pd.Series(np.nan)
-        self.df['senkou_b'] = pd.Series(np.nan)
+        self.df['tenkan_sen']=pd.Series(np.nan)
+        self.df['kijun_sen']=pd.Series(np.nan)
+        self.df['chikou_span']=pd.Series(np.nan)
+        self.df['senkou_a']=pd.Series(np.nan)
+        self.df['senkou_b']=pd.Series(np.nan)
 
         self.process()
 
     def update_df(self, i, tenkan, kijun, chikou, senkou_a, senkou_b):
         if i - 26 >= 0:
-            self.df.loc[i - 26, 'chikou_span'] = chikou
+            self.df.loc[i - 26, 'chikou_span']=chikou
 
-        self.df.loc[i, ['tenkan_sen', 'kijun_sen']] = (tenkan, kijun)
-        self.df.loc[i + 26, ['senkou_a', 'senkou_b']] = (senkou_a, senkou_b)
+        self.df.loc[i, ['tenkan_sen', 'kijun_sen']]=(tenkan, kijun)
+        self.df.loc[i + 26, ['senkou_a', 'senkou_b']]=(senkou_a, senkou_b)
 
     def process(self):
         def avg(highs, lows):
@@ -159,28 +176,28 @@ class Ichimoku:
                 return ((max(highs) + min(lows)) / 2)
             return None
         for i, row in self.df.iterrows():
-            hi = self.df.loc[i, self.n["high"]]
-            lo = self.df.loc[i, self.n["low"]]
+            hi=self.df.loc[i, self.n["high"]]
+            lo=self.df.loc[i, self.n["low"]]
 
             self.tenkan_highs.append(hi)
             self.tenkan_lows.append(lo)
 
             self.kijun_highs.append(hi)
             self.kijun_lows.append(lo)
-            tenkan = self.avg(self.tenkan_highs, self.tenkan_lows)
-            kijun = self.avg(self.kijun_highs, self.kijun_lows)
+            tenkan=avg(self.tenkan_highs, self.tenkan_lows)
+            kijun=avg(self.kijun_highs, self.kijun_lows)
 
             if tenkan and kijun:
-                senkou_a = (tenkan + kijun) / 2
+                senkou_a=(tenkan + kijun) / 2
             else:
-                senkou_a = None
+                senkou_a=None
 
             self.senkou_b_highs.append(hi)
             self.senkou_b_lows.append(lo)
 
-            senkou_b = self.avg(self.senkou_b_highs, self.senkou_b_lows)
+            senkou_b=avg(self.senkou_b_highs, self.senkou_b_lows)
 
-            chikou = self.df.loc[i, self.n["close"]]
+            chikou=self.df.loc[i, self.n["close"]]
 
             self.update_df(i, tenkan, kijun, chikou, senkou_a, senkou_b)
 
@@ -191,18 +208,18 @@ class Ichimoku:
         For more fine-grained recommendations, might need Tristate class with notes.
         """
         def last(line):
-            last_i = self.df[line].last_valid_index()
-            last_value = self.df.loc[last_i, line]
+            last_i=self.df[line].last_valid_index()
+            last_value=self.df.loc[last_i, line]
             return last_i, last_value
 
-        last_i_chikou, chikou_span = last('chikou_span')
-        chikou_all_clear = (chikou_span > self.df.loc[last_i_chikou, 'tenkan_sen']) and \
+        last_i_chikou, chikou_span=last('chikou_span')
+        chikou_all_clear=(chikou_span > self.df.loc[last_i_chikou, 'tenkan_sen']) and \
             (chikou_span > self.df.loc[last_i_chikou, 'kijun_sen']) and \
             (chikou_span > self.df.loc[last_i_chikou, 'senkou_a']) and \
             (chikou_span > self.df.loc[last_i_chikou, 'senkou_b'])
 
-        last_i, tenkan_sen = last('tenkan_sen')
-        now_all_clear = (tenkan_sen >= self.df.loc[last_i, 'kijun_sen']) and \
+        last_i, tenkan_sen=last('tenkan_sen')
+        now_all_clear=(tenkan_sen >= self.df.loc[last_i, 'kijun_sen']) and \
             (tenkan_sen > self.df.loc[last_i, 'senkou_a']) and \
             (tenkan_sen > self.df.loc[last_i, 'senkou_b'])
         return chikou_all_clear and now_all_clear

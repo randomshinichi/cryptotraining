@@ -1,0 +1,53 @@
+from datamanager import DataManager
+from indicators import Ichimoku, RSI
+
+
+class Timeframe:
+    """Holds actual price data and manages the indicators on that data"""
+
+    def __init__(self, pair, timeframe):
+        self.dm = DataManager()
+        self.data = self.dm.open(pair, timeframe)
+        self.rsi = None
+        self.ichimoku = None
+
+    def run_indicators(self, rsi, ichimoku):
+        """
+        Just because you created the Timeframe, doesn't mean
+        you should run all the indicatros straight away!
+        On the other hand, accumulating lots of Coins hanging around,
+        waiting for you to run run_indicators() on them eats up too much RAM.
+        """
+        if rsi:
+            self.rsi = RSI(self.data)
+        if ichimoku:
+            self.ichimoku = Ichimoku(self.data)
+
+
+class Coin:
+    """
+    Actual entry search tactics defined here.
+    Can compare across Timeframes.
+    """
+
+    def __init__(self, pair):
+        self.pair = pair
+        self.dm = DataManager()
+        self.tf = {
+            "1h": Timeframe(self.pair, "1h"),
+            "2h": Timeframe(self.pair, "2h"),
+            "4h": Timeframe(self.pair, "4h"),
+            "1d": Timeframe(self.pair, "1d")
+        }
+
+    def run_indicators(self, rsi=True, ichimoku=False):
+        for timeframe in self.tf:
+            self.tf[timeframe].run_indicators(rsi, ichimoku)
+
+    def rsi_increasing_multiple_timeframes(self):
+        timeframes = [self.tf["1h"].rsi.is_increasing(), self.tf["2h"].rsi.is_increasing(), self.tf[
+            "4h"].rsi.is_increasing(), self.tf["1d"].rsi.is_increasing()]
+        return all(timeframes[:3]), timeframes
+
+    def rsi_is_oversold(self):
+        return self.tf["1d"].rsi.is_oversold(period=1)

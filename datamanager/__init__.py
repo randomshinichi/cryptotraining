@@ -160,6 +160,10 @@ class DataManager:
 
         print("Writing Data")
         for m in all_data:
+            with open(self.get_data_path(m, "1h"), 'w') as f:
+                f.write(all_data[m]["1h"])
+            with open(self.get_data_path(m, "2h"), 'w') as f:
+                f.write(all_data[m]["2h"])
             with open(self.get_data_path(m, "4h"), 'w') as f:
                 f.write(all_data[m]["4h"])
             with open(self.get_data_path(m, "1d"), 'w') as f:
