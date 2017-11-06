@@ -24,10 +24,9 @@ parser.add_argument('filename', type=str, help='the entries.json file')
 
 args = parser.parse_args()
 table = BeautifulTable()
-table.column_headers = ["pair", "ratio", "note"]
+table.column_headers = ["pair", "ratio", "size", "note"]
 
 trex = ccxt.bittrex()
-
 
 f = open(args.filename, 'r')
 entries = json.load(f)
@@ -38,13 +37,12 @@ entries_sorted = sorted(entries)
 while True:
     table.clear()
     for k in entries_sorted:
-        entry_price = entries[k]["price"]
+        entry = entries[k]
 
-        k_ccxt = translate_dash_to_slash(k)
-        current = trex.fetch_ticker(k_ccxt)
+        current = trex.fetch_ticker(translate_dash_to_slash(k))
 
-        ratio = current['last'] / entry_price
-        table.append_row([k, ratio, entries[k]["note"]])
+        ratio = current['last'] / entry["price"]
+        table.append_row([k, ratio, entry.get("size", "0"), entry.get("note", "")])
 
     os.system('clear')
     print(table)
