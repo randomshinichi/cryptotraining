@@ -4,7 +4,7 @@ import time
 import os
 import ccxt
 from beautifultable import BeautifulTable
-
+from ccxt.base.errors import RequestTimeout, ExchangeNotAvailable
 
 def translate_dash_to_slash(pair):
     """
@@ -26,7 +26,10 @@ args = parser.parse_args()
 table = BeautifulTable()
 table.column_headers = ["pair", "ratio", "size", "note"]
 
-trex = ccxt.bittrex()
+exchanges = {
+    "bittrex": ccxt.bittrex(),
+}
+exch = exchanges["bittrex"]
 
 f = open(args.filename, 'r')
 entries = json.load(f)
@@ -39,11 +42,16 @@ while True:
     for k in entries_sorted:
         entry = entries[k]
 
-        current = trex.fetch_ticker(translate_dash_to_slash(k))
+        try:
+            current = exch.fetch_ticker(translate_dash_to_slash(k))
+            ratio = current['last'] / entry["price"]
+        except RequestTimeout:
+            ratio = "TMO"
+        except ExchangeNotAvailable:
+            ratio = "ENA"
 
-        ratio = current['last'] / entry["price"]
         table.append_row([k, ratio, entry.get("size", "0"), entry.get("note", "")])
 
     os.system('clear')
     print(table)
-    time.sleep(30)
+    time.sleep(60)
