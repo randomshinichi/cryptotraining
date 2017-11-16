@@ -105,6 +105,9 @@ class DataManager:
         df['timestamp'] = df['timestamp'].map(date2num)
         return df
 
+    def write(self, timeframes):
+        pass
+
     def download_bittrex(self):
         def get(m, period='day'):
             url = 'https://bittrex.com/Api/v2.0/pub/market/GetTicks?marketName={}&tickInterval={}'
@@ -132,7 +135,7 @@ class DataManager:
             df2 = df.reset_index()
             return df2.to_json(orient='records', date_format='iso')
 
-        all_data = {}
+        timeframes = {}
         for m in list(self.bittrex_markets.keys()):
             market_name = self.slash_to_dash(m)
             print(market_name, end="", flush=True)
@@ -153,18 +156,18 @@ class DataManager:
             except Exception as e:
                 print("something's wrong with {}".format(market_name), e)
             else:
-                all_data[market_name] = pair_data
+                timeframes[market_name] = pair_data
                 print(" ✓")
 
             time.sleep(0.2)
 
         print("Writing Data")
-        for m in all_data:
+        for m in timeframes:
             with open(self.get_data_path(m, "1h"), 'w') as f:
-                f.write(all_data[m]["1h"])
+                f.write(timeframes[m]["1h"])
             with open(self.get_data_path(m, "2h"), 'w') as f:
-                f.write(all_data[m]["2h"])
+                f.write(timeframes[m]["2h"])
             with open(self.get_data_path(m, "4h"), 'w') as f:
-                f.write(all_data[m]["4h"])
+                f.write(timeframes[m]["4h"])
             with open(self.get_data_path(m, "1d"), 'w') as f:
-                f.write(all_data[m]["1d"])
+                f.write(timeframes[m]["1d"])
