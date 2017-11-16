@@ -3,3 +3,4 @@ openpyxl # coinmarketcap
 ccxt # for exchange interaction
 pandas # for Indicators
 beautifultable # for bags, pretty printing
+watchdog # autoreload entries.json upon change

@@ -8,6 +8,27 @@ import ccxt
 from collections import OrderedDict
 from beautifultable import BeautifulTable
 from ccxt.base.errors import RequestTimeout, ExchangeNotAvailable
+from watchdog.observers import Observer
+from watchdog.events import  FileSystemEventHandler
+
+parser = argparse.ArgumentParser()
+parser.add_argument('filename', type=str, help='the data.json file')
+
+args = parser.parse_args()
+table = BeautifulTable()
+table.column_headers = ["pair", "ratio", "size", "note"]
+
+exchanges = {
+    "bittrex": ccxt.bittrex(),
+    "poloniex": ccxt.poloniex(),
+}
+
+
+class MyHandler(FileSystemEventHandler):
+    def on_modified(self, event):
+        print("file changed, updating...")
+        data = load_data(args.filename)
+        refresh_and_print_table(data)
 
 
 def translate_dash_to_slash(pair):
@@ -23,23 +44,14 @@ def translate_dash_to_slash(pair):
         return pair
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('filename', type=str, help='the data.json file')
+def load_data(filename):
+    f = open(args.filename, 'r')
+    data = json.load(f, object_pairs_hook=OrderedDict)
+    f.close()
+    return data
 
-args = parser.parse_args()
-table = BeautifulTable()
-table.column_headers = ["pair", "ratio", "size", "note"]
 
-exchanges = {
-    "bittrex": ccxt.bittrex(),
-    "poloniex": ccxt.poloniex(),
-}
-
-f = open(args.filename, 'r')
-data = json.load(f, object_pairs_hook=OrderedDict)
-f.close()
-
-while True:
+def refresh_and_print_table(data):
     table.clear()
     for exchange in data:
         e = exchanges[exchange]
@@ -59,4 +71,19 @@ while True:
 
     os.system('clear')
     print(table)
-    time.sleep(60)
+
+
+data = load_data(args.filename)
+
+fs_handler = MyHandler()
+observer = Observer()
+observer.schedule(fs_handler, os.path.dirname(args.filename))
+observer.start()
+
+try:
+    while True:
+        refresh_and_print_table(data)
+        time.sleep(60)
+except KeyboardInterrupt:
+    observer.stop()
+observer.join()
