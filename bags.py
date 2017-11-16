@@ -1,10 +1,14 @@
+#!/usr/bin/env python3
+
 import json
 import argparse
 import time
 import os
 import ccxt
+from collections import OrderedDict
 from beautifultable import BeautifulTable
 from ccxt.base.errors import RequestTimeout, ExchangeNotAvailable
+
 
 def translate_dash_to_slash(pair):
     """
@@ -20,7 +24,7 @@ def translate_dash_to_slash(pair):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('filename', type=str, help='the entries.json file')
+parser.add_argument('filename', type=str, help='the data.json file')
 
 args = parser.parse_args()
 table = BeautifulTable()
@@ -28,29 +32,30 @@ table.column_headers = ["pair", "ratio", "size", "note"]
 
 exchanges = {
     "bittrex": ccxt.bittrex(),
+    "poloniex": ccxt.poloniex(),
 }
-exch = exchanges["bittrex"]
 
 f = open(args.filename, 'r')
-entries = json.load(f)
+data = json.load(f, object_pairs_hook=OrderedDict)
 f.close()
-
-entries_sorted = sorted(entries)
 
 while True:
     table.clear()
-    for k in entries_sorted:
-        entry = entries[k]
+    for exchange in data:
+        e = exchanges[exchange]
 
-        try:
-            current = exch.fetch_ticker(translate_dash_to_slash(k))
-            ratio = current['last'] / entry["price"]
-        except RequestTimeout:
-            ratio = "TMO"
-        except ExchangeNotAvailable:
-            ratio = "ENA"
+        for pair in data[exchange]:
+            entry = data[exchange][pair]
 
-        table.append_row([k, ratio, entry.get("size", "0"), entry.get("note", "")])
+            try:
+                current = e.fetch_ticker(translate_dash_to_slash(pair))
+                ratio = current['last'] / entry["price"]
+            except RequestTimeout:
+                ratio = "TMO"
+            except ExchangeNotAvailable:
+                ratio = "ENA"
+
+            table.append_row([pair, ratio, entry.get("size", "0"), entry.get("note", "")])
 
     os.system('clear')
     print(table)
