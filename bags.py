@@ -9,7 +9,7 @@ from collections import OrderedDict
 from beautifultable import BeautifulTable
 from ccxt.base.errors import RequestTimeout, ExchangeNotAvailable
 from watchdog.observers import Observer
-from watchdog.events import  FileSystemEventHandler
+from watchdog.events import FileSystemEventHandler
 
 parser = argparse.ArgumentParser()
 parser.add_argument('filename', type=str, help='the data.json file')
@@ -21,6 +21,7 @@ table.column_headers = ["pair", "ratio", "size", "note"]
 exchanges = {
     "bittrex": ccxt.bittrex(),
     "poloniex": ccxt.poloniex(),
+    "bitfinex": ccxt.bitfinex(),
 }
 
 
