@@ -22,14 +22,14 @@ exchanges = {
     "bittrex": ccxt.bittrex(),
     "poloniex": ccxt.poloniex(),
     "bitfinex": ccxt.bitfinex(),
+    "cryptopia": ccxt.cryptopia()
 }
 
 
-class MyHandler(FileSystemEventHandler):
-    def on_modified(self, event):
-        print("file changed, updating...")
-        data = load_data(args.filename)
-        refresh_and_print_table(data)
+def load_data(filename):
+    with open(args.filename, 'r') as f:
+        data = json.load(f, object_pairs_hook=OrderedDict)
+        return data
 
 
 def translate_dash_to_slash(pair):
@@ -43,13 +43,6 @@ def translate_dash_to_slash(pair):
     except ValueError:
         # It's probably already in the right format
         return pair
-
-
-def load_data(filename):
-    f = open(args.filename, 'r')
-    data = json.load(f, object_pairs_hook=OrderedDict)
-    f.close()
-    return data
 
 
 def refresh_and_print_table(data):
@@ -74,17 +67,34 @@ def refresh_and_print_table(data):
     print(table)
 
 
-data = load_data(args.filename)
+class FSHandler(FileSystemEventHandler):
+    def on_modified(self, event):
+        if event.src_path == args.filename:
+            print(event.src_path, "updated, refreshing")
+            data = load_data(event.src_path)
+            refresh_and_print_table(data)
 
-fs_handler = MyHandler()
-observer = Observer()
-observer.schedule(fs_handler, os.path.dirname(args.filename))
-observer.start()
 
-try:
-    while True:
-        refresh_and_print_table(data)
-        time.sleep(60)
-except KeyboardInterrupt:
-    observer.stop()
-observer.join()
+class Watcher:
+    def __init__(self):
+        self.observer = Observer()
+
+    def run(self):
+        fs_handler = FSHandler()
+        self.observer.schedule(fs_handler, os.path.dirname(args.filename))
+        self.observer.start()
+
+        try:
+            while True:
+                data = load_data(args.filename)
+                refresh_and_print_table(data)
+                print("ok going to sleep")
+                time.sleep(60)
+        except KeyboardInterrupt:
+            self.observer.stop()
+
+        self.observer.join()
+
+
+w = Watcher()
+w.run()
