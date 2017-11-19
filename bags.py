@@ -16,7 +16,8 @@ parser.add_argument('filename', type=str, help='the data.json file')
 
 args = parser.parse_args()
 table = BeautifulTable()
-table.column_headers = ["pair", "ratio", "size", "note"]
+table.column_headers = ["pair", "price", "ratio", "size", "note"]
+table.numeric_precision = 8
 
 exchanges = {
     "bittrex": ccxt.bittrex(),
@@ -56,12 +57,12 @@ def refresh_and_print_table(data):
             try:
                 current = e.fetch_ticker(translate_dash_to_slash(pair))
                 ratio = current['last'] / entry["price"]
+                ratio = int(ratio * 100) / 100.0  # try to truncate so that 10% is just 1.10
             except RequestTimeout:
                 ratio = "TMO"
             except ExchangeNotAvailable:
                 ratio = "ENA"
-
-            table.append_row([pair, ratio, entry.get("size", "0"), entry.get("note", "")])
+            table.append_row([pair, entry["price"], ratio, entry.get("size", "0"), entry.get("note", "")])
 
     os.system('clear')
     print(table)
