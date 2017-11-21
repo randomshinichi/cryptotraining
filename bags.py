@@ -23,7 +23,8 @@ exchanges = {
     "bittrex": ccxt.bittrex(),
     "poloniex": ccxt.poloniex(),
     "bitfinex": ccxt.bitfinex(),
-    "cryptopia": ccxt.cryptopia()
+    "cryptopia": ccxt.cryptopia(),
+    "kraken": ccxt.kraken()
 }
 
 
