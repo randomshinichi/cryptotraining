@@ -38,40 +38,28 @@ class RSI:
             rsi = 100 - (100 / (1 + rs))
             return rsi
 
-        for i, row in self.df[1:].iterrows():
-            gain = 0
-            loss = 0
+        # self.df['close_-1'] = self.df.close.shift(-1)
+        # difference = self.df['close_-1'] - self.df['close'] # move future prices back 1
 
-            try:
-                change = row['close'] - self.df.loc[i - 1, 'close']
-            except TypeError as e:
-                # print("NaNs in price data")
-                change = np.nan
+        closes = pd.DataFrame([44.34, 44.09, 44.15, 43.61, 44.33, 44.83, 45.10, 45.42, 45.84, 46.08, 45.89, 46.03, 45.61, 46.28, 46.28, 46.00, 46.03, 46.41, 46.22, 45.64, 46.21, 46.25, 45.71, 46.45, 45.78, 45.35, 44.03, 44.18, 44.22, 44.57, 43.42, 42.66, 43.13])
+        closes_1 = closes.shift(-1)  # move future prices back 1
+        difference = closes_1 - closes
 
-            if change > 0:
-                gain = change
-            elif change < 0:
-                loss = abs(change)
+        # Separates the gains from the losses, sets the unwanted values to 0
+        gains = (difference + difference.abs()) / 2
+        losses = (-difference + difference.abs()) / 2
 
-            self.gains.append(gain)
-            self.losses.append(loss)
+        # SMMA = SMoothed Moving Average
+        """
+        Unfortunately this just doesn't give the same numbers as TradingView/Stockcharts.
+        Must have to do with the fact that initialization of the EMA is different.
+        http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:relative_strength_index_rsi
+        """
+        gains_smma = gains.ewm(ignore_na=False, alpha=1.0 / self.length, min_periods=self.length, adjust=True).mean()
+        losses_smma = losses.ewm(ignore_na=False, alpha=1.0 / self.length, min_periods=self.length, adjust=True).mean()
 
-            # if i < 14, keep iterating until the deques are full
-            if i < self.length:
-                continue
-
-            if i == self.length:
-                gain_avg = sum(self.gains) / len(self.gains)
-                losses_avg = sum(self.losses) / len(self.losses)
-
-            elif i > self.length:
-                gain_avg = (13 * self.gain_avg_prev + self.gains[-1]) / self.length
-                losses_avg = (13 * self.losses_avg_prev + self.losses[-1]) / self.length
-
-            self.gain_avg_prev = gain_avg
-            self.losses_avg_prev = losses_avg
-
-            self.df.loc[i, 'rsi'] = rsi(gain_avg, losses_avg)
+        rs = gains_smma / losses_smma
+        self.df['rsi'] = 100 - (100 / (1.0 + rs))
 
     def is_oversold(self, period=1):
         """
