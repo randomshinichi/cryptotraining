@@ -13,6 +13,7 @@ dm = DataManager(force_refresh=args.download)
 if args.download:  # Download new price data
     dm.download_bittrex()
 
+
 def search_rsi_increasing_multiple_timeframes(pair):
     coin = Coin(pair)
 
@@ -21,12 +22,14 @@ def search_rsi_increasing_multiple_timeframes(pair):
     if rsi_increasing:
         print(coin.pair, details)
 
+
 def search_rsi_is_oversold(pair):
     coin = Coin(pair)
     coin.run_indicators()
     is_oversold = coin.rsi_is_oversold()
     if is_oversold:
         print(coin.pair, "is oversold on the 1d timeframe")
+
 
 pool = Pool()
 pool.map(search_rsi_is_oversold, list(dm.bittrex_markets.keys()))

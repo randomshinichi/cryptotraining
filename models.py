@@ -1,5 +1,5 @@
 from datamanager import DataManager
-from indicators import Ichimoku, RSI
+from indicators import Ichimoku, RSI, StochasticRSI
 
 
 class Timeframe:
@@ -9,9 +9,10 @@ class Timeframe:
         self.dm = DataManager()
         self.data = self.dm.open(pair, timeframe)
         self.rsi = None
+        self.stochrsi = None
         self.ichimoku = None
 
-    def run_indicators(self, rsi, ichimoku):
+    def run_indicators(self, rsi=False, stochrsi=False, ichimoku=False):
         """
         Just because you created the Timeframe, doesn't mean
         you should run all the indicatros straight away!
@@ -20,8 +21,13 @@ class Timeframe:
         """
         if rsi:
             self.rsi = RSI(self.data)
+            self.rsi.process()
+        if stochrsi:
+            self.stochrsi = StochasticRSI(self.data)
+            self.stochrsi.process()
         if ichimoku:
             self.ichimoku = Ichimoku(self.data)
+            self.ichimoku.process()
 
 
 class Coin:
@@ -39,6 +45,11 @@ class Coin:
             "4h": Timeframe(self.pair, "4h"),
             "1d": Timeframe(self.pair, "1d")
         }
+
+    def debug(self):
+        self.tf["1d"].run_indicators(rsi=True, stochrsi=True)
+        import ipdb
+        ipdb.set_trace()
 
     def run_indicators(self, rsi=True, ichimoku=False):
         for timeframe in self.tf:

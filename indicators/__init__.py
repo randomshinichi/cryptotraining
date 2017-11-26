@@ -27,8 +27,6 @@ class RSI:
         self.losses_avg_prev = 0
         self.df['rsi'] = pd.Series(np.nan)
 
-        self.process()
-
     def process(self):
         def rsi(gain_avg, losses_avg):
             # Sometimes you get dirty data, especially at the beginning of a coin's life
@@ -109,6 +107,31 @@ class RSI:
         return window_1.mean() <= window_2.mean()
 
 
+class StochasticRSI(RSI):
+    """
+    TradingView's Stochastic RSI has two lines
+    1. the Stochastic
+    2. the 3 day Simple Moving Average of the Stochastic
+    """
+
+    def __init__(self, df, length=14):
+        super().__init__(df, length)
+
+        self.df['stochrsi'] = pd.Series(np.nan)
+
+    def process(self):
+        super().process()
+
+        # Since we need the high, low as well as the rsi, we don't have to use loc
+        # like is_increasing() does
+        rsi_min = self.df['rsi'].rolling(min_periods=1, window=self.length, center=False).min()
+        rsi_max = self.df['rsi'].rolling(min_periods=1, window=self.length, center=False).max()
+
+        raw_stochrsi = (self.df['rsi'] - rsi_min) / (rsi_max - rsi_min)
+
+        self.df['stochrsi'] = raw_stochrsi.rolling(min_periods=3, window=3, center=False).mean() * 100
+
+
 class Ichimoku:
     colours = {
         "tenkan_sen": "#0496ff",
@@ -153,8 +176,6 @@ class Ichimoku:
         self.df['chikou_span'] = pd.Series(np.nan)
         self.df['senkou_a'] = pd.Series(np.nan)
         self.df['senkou_b'] = pd.Series(np.nan)
-
-        self.process()
 
     def update_df(self, i, tenkan, kijun, chikou, senkou_a, senkou_b):
         if i - 26 >= 0:
