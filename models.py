@@ -12,7 +12,7 @@ class Timeframe:
         self.stochrsi = None
         self.ichimoku = None
 
-    def run_indicators(self, rsi=False, stochrsi=False, ichimoku=False):
+    def run_indicators(self, rsi, stochrsi, ichimoku):
         """
         Just because you created the Timeframe, doesn't mean
         you should run all the indicatros straight away!
@@ -47,13 +47,11 @@ class Coin:
         }
 
     def debug(self):
-        self.tf["1d"].run_indicators(rsi=True, stochrsi=True)
-        import ipdb
-        ipdb.set_trace()
+        self.tf["1h"].run_indicators(rsi=True, stochrsi=True)
 
-    def run_indicators(self, rsi=True, ichimoku=False):
+    def run_indicators(self, rsi=False, stochrsi=False, ichimoku=False):
         for timeframe in self.tf:
-            self.tf[timeframe].run_indicators(rsi, ichimoku)
+            self.tf[timeframe].run_indicators(rsi, stochrsi, ichimoku)
 
     def rsi_increasing_multiple_timeframes(self):
         timeframes = [self.tf["1h"].rsi.is_increasing(), self.tf["2h"].rsi.is_increasing(), self.tf[
@@ -62,3 +60,6 @@ class Coin:
 
     def rsi_is_oversold(self):
         return self.tf["1d"].rsi.is_oversold(period=1)
+
+    def stochrsi_is_oversold(self):
+        return self.tf["1d"].stochrsi.is_oversold()

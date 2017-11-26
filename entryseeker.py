@@ -17,7 +17,7 @@ if args.download:  # Download new price data
 def search_rsi_increasing_multiple_timeframes(pair):
     coin = Coin(pair)
 
-    coin.run_indicators()
+    coin.run_indicators(rsi=True)
     rsi_increasing, details = coin.rsi_increasing_multiple_timeframes()
     if rsi_increasing:
         print(coin.pair, details)
@@ -25,11 +25,18 @@ def search_rsi_increasing_multiple_timeframes(pair):
 
 def search_rsi_is_oversold(pair):
     coin = Coin(pair)
-    coin.run_indicators()
+    coin.run_indicators(rsi=True)
     is_oversold = coin.rsi_is_oversold()
     if is_oversold:
         print(coin.pair, "is oversold on the 1d timeframe")
 
 
+def search_stochrsi_is_oversold(pair):
+    coin = Coin(pair)
+    coin.run_indicators(stochrsi=True)
+    if coin.stochrsi_is_oversold():
+        print(coin.pair, "StochRSI reports BUY")
+
+
 pool = Pool()
-pool.map(search_rsi_is_oversold, list(dm.bittrex_markets.keys()))
+pool.map(search_stochrsi_is_oversold, list(dm.bittrex_markets.keys()))

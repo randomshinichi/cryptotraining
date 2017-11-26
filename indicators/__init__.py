@@ -131,6 +131,9 @@ class StochasticRSI(RSI):
 
         self.df['stochrsi'] = raw_stochrsi.rolling(min_periods=3, window=3, center=False).mean() * 100
 
+    def is_oversold(self, threshold=20):
+        return self.df.stochrsi.iloc[-1] < threshold
+
 
 class Ichimoku:
     colours = {
