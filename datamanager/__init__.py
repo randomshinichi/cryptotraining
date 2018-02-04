@@ -75,7 +75,6 @@ class DataManager:
         """
         path = self.get_data_path(pair, timeframe)
         with open(path, 'r') as d:
-            import ipdb; ipdb.set_trace()
             df = pd.read_csv(d)
 
         df = df[['timestamp', 'open', 'high',

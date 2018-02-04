@@ -26,6 +26,7 @@ exchanges = {
     "cryptopia": ccxt.cryptopia(),
     "kraken": ccxt.kraken(),
     "liqui": ccxt.liqui(),
+    "binance": ccxt.binance()
 }
 
 
