@@ -64,7 +64,7 @@ class DataManager:
         Input: 'LTC/BTC', '4h'
         Returns '/Users/shinichi/source/cryptocoins/datamanager/data/1d/BTC-LTC.json'
         """
-        return os.path.join(self.dir_path, "data", timeframe, self.slash_to_dash(pair) + ".json")
+        return os.path.join(self.dir_path, "data", timeframe, self.slash_to_dash(pair) + ".csv")
 
     def open(self, pair, timeframe, from_time=None, until_time=None, matplotlib=False):
         """
@@ -75,7 +75,8 @@ class DataManager:
         """
         path = self.get_data_path(pair, timeframe)
         with open(path, 'r') as d:
-            df = pd.read_json(d, orient='records')
+            import ipdb; ipdb.set_trace()
+            df = pd.read_csv(d)
 
         df = df[['timestamp', 'open', 'high',
                  'low', 'close', 'volume', 'basevolume']]
@@ -112,7 +113,6 @@ class DataManager:
         def get(m, period='day'):
             url = 'https://bittrex.com/Api/v2.0/pub/market/GetTicks?marketName={}&tickInterval={}'
             resp = requests.get(url.format(m, period)).json()
-
             df = pd.DataFrame.from_dict(resp["result"])
             df.rename(
                 index=str,
@@ -133,7 +133,10 @@ class DataManager:
             Because the index is never saved as a column with the data.
             """
             df2 = df.reset_index()
-            return df2.to_json(orient='records', date_format='iso')
+
+            # By default, to_csv will include the index of the line, starting from 0. \
+            # Who needs that? Just the timestamp is enough.
+            return df2.to_csv(date_format='%Y-%m-%d %H:%M:%S', index=False)
 
         timeframes = {}
         for m in list(self.bittrex_markets.keys()):
