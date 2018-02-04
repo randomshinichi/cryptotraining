@@ -1,5 +1,6 @@
 from datamanager import DataManager
 from indicators import Ichimoku, RSI, StochasticRSI
+from talib import EMA
 
 
 class Timeframe:
@@ -63,3 +64,17 @@ class Coin:
 
     def stochrsi_is_oversold(self):
         return self.tf["1d"].stochrsi.is_oversold()
+
+    def emafast_over_emaslow_daily(self):
+        ema_fast = EMA(self.tf["1d"].data.close.as_matrix(), 9)
+        ema_slow = EMA(self.tf["1d"].data.close.as_matrix(), 26)
+
+        # If EMA9 > EMA26, find out when the bullish cross happened
+        if ema_fast[-1] > ema_slow[-1]:
+            idx = 1
+            while ema_fast[-idx] > ema_slow[-idx]:
+                idx += 1
+
+            return ema_fast[-1] > ema_slow[-1], idx
+        else:
+            return False, 0

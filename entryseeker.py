@@ -1,5 +1,4 @@
 import argparse
-import json
 from datamanager import DataManager
 from models import Timeframe, Coin
 from multiprocessing import Pool
@@ -23,6 +22,13 @@ def search_rsi_increasing_multiple_timeframes(pair):
         print(coin.pair, details)
 
 
+def search_emafast_over_emaslow(pair):
+    coin = Coin(pair)
+    emafast_over_emaslow, days_ago = coin.emafast_over_emaslow_daily()
+    if emafast_over_emaslow and days_ago <= 10:
+        print(coin.pair, "EMA-9 vs EMA-26 bullish cross {} days ago".format(days_ago))
+
+
 def search_rsi_is_oversold(pair):
     coin = Coin(pair)
     coin.run_indicators(rsi=True)
@@ -39,4 +45,4 @@ def search_stochrsi_is_oversold(pair):
 
 
 pool = Pool()
-pool.map(search_stochrsi_is_oversold, list(dm.bittrex_markets.keys()))
+pool.map(search_rsi_is_oversold, list(dm.bittrex_markets.keys()))
