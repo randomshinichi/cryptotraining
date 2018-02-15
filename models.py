@@ -1,34 +1,7 @@
-from datamanager import DataManager
-from indicators import Ichimoku, RSI, StochasticRSI
-from talib import EMA
+from datamanager import Data
+from talib import EMA, RSI, STOCHRSI
 
-
-class Timeframe:
-    """Holds actual price data and manages the indicators on that data"""
-
-    def __init__(self, pair, timeframe):
-        self.dm = DataManager()
-        self.data = self.dm.open(pair, timeframe)
-        self.rsi = None
-        self.stochrsi = None
-        self.ichimoku = None
-
-    def run_indicators(self, rsi, stochrsi, ichimoku):
-        """
-        Just because you created the Timeframe, doesn't mean
-        you should run all the indicatros straight away!
-        On the other hand, accumulating lots of Coins hanging around,
-        waiting for you to run run_indicators() on them eats up too much RAM.
-        """
-        if rsi:
-            self.rsi = RSI(self.data)
-            self.rsi.process()
-        if stochrsi:
-            self.stochrsi = StochasticRSI(self.data)
-            self.stochrsi.process()
-        if ichimoku:
-            self.ichimoku = Ichimoku(self.data)
-            self.ichimoku.process()
+dm = Data()
 
 
 class Coin:
@@ -37,37 +10,25 @@ class Coin:
     Can compare across Timeframes.
     """
 
-    def __init__(self, pair):
+    def __init__(self, pair, exchange):
         self.pair = pair
-        self.dm = DataManager()
+        self.exchange = exchange
         self.tf = {
-            "1h": Timeframe(self.pair, "1h"),
-            "2h": Timeframe(self.pair, "2h"),
-            "4h": Timeframe(self.pair, "4h"),
-            "1d": Timeframe(self.pair, "1d")
+            "1h": dm.open(self.pair, "1h", exchange),
+            "2h": dm.open(self.pair, "2h", exchange),
+            "4h": dm.open(self.pair, "4h", exchange),
+            "1d": dm.open(self.pair, "1d", exchange)
         }
 
-    def debug(self):
-        self.tf["1h"].run_indicators(rsi=True, stochrsi=True)
+    def __str__(self):
+        return self.pair
 
-    def run_indicators(self, rsi=False, stochrsi=False, ichimoku=False):
-        for timeframe in self.tf:
-            self.tf[timeframe].run_indicators(rsi, stochrsi, ichimoku)
-
-    def rsi_increasing_multiple_timeframes(self):
-        timeframes = [self.tf["1h"].rsi.is_increasing(), self.tf["2h"].rsi.is_increasing(), self.tf[
-            "4h"].rsi.is_increasing(), self.tf["1d"].rsi.is_increasing()]
-        return all(timeframes[:3]), timeframes
-
-    def rsi_is_oversold(self):
-        return self.tf["1d"].rsi.is_oversold(period=1)
-
-    def stochrsi_is_oversold(self):
-        return self.tf["1d"].stochrsi.is_oversold()
+    def __repr__(self):
+        return self.pair
 
     def emafast_over_emaslow_daily(self):
-        ema_fast = EMA(self.tf["1d"].data.close.as_matrix(), 9)
-        ema_slow = EMA(self.tf["1d"].data.close.as_matrix(), 26)
+        ema_fast = EMA(self.tf["1d"].close.as_matrix(), 9)
+        ema_slow = EMA(self.tf["1d"].close.as_matrix(), 26)
 
         # If EMA9 > EMA26, find out when the bullish cross happened
         if ema_fast[-1] > ema_slow[-1]:
@@ -78,3 +39,15 @@ class Coin:
             return ema_fast[-1] > ema_slow[-1], idx
         else:
             return False, 0
+
+    def rsi_increasing_all_timeframes(self, period=20):
+        def is_increasing(series):
+            midpoint = int(len(series) / 2)
+            return series[:midpoint].mean() < series[midpoint:].mean()
+
+        results = []
+        for i in list(self.tf.keys()):
+            rsi_timeframe = RSI(self.tf[i].close.as_matrix())[-period:]
+            results.append(is_increasing(rsi_timeframe))
+
+        return all(results)
