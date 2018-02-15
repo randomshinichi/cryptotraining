@@ -47,8 +47,12 @@ class Data:
         with open(os.path.join(path, pair + '.csv'), 'w') as d:
             d.write(data)
 
-    @property
     def exchanges(self):
         root_path = Path(self.root)
         exchanges = [x.stem for x in root_path.iterdir() if x.is_dir()]
         return exchanges
+
+    def pairs(self, exchange):
+        exchange_daily_path = Path(os.path.join(self.root, exchange, '1d'))
+        pairs = [x.stem for x in exchange_daily_path.iterdir() if x.is_file()]
+        return pairs
