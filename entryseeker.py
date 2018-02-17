@@ -4,6 +4,7 @@ from models import Coin
 from multiprocessing import Pool
 
 parser = argparse.ArgumentParser()
+parser.add_argument('exchange', help="binance/bittrex")
 args = parser.parse_args()
 
 
@@ -27,5 +28,5 @@ pool = Pool()
 pool.map() only supports (func, arg)
 pool.starmap() supports (func, (as many args as you want in a tuple))
 """
-pairs_exchange = [(p, 'bittrex') for p in Data().pairs('bittrex')]
+pairs_exchange = [(p, args.exchange) for p in Data().pairs(args.exchange)]
 pool.starmap(search_emafast_over_emaslow, pairs_exchange)
