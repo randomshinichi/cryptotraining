@@ -1,11 +1,8 @@
+#!/usr/bin/env python3
 import argparse
 from datamanager import Data
 from models import Coin
 from multiprocessing import Pool
-
-parser = argparse.ArgumentParser()
-parser.add_argument('exchange', help="binance/bittrex")
-args = parser.parse_args()
 
 
 def search_ema_daily(pair, exchange):
@@ -36,11 +33,22 @@ def search_stochrsi_oversold_all_timeframes(pair, exchange):
         print(coin.pair, "({})".format(coin.exchange), "StochRSI oversold on all timeframes")
 
 
-pool = Pool()
+parser = argparse.ArgumentParser()
+parser.add_argument('search_method', help="search_ema_daily, search_stochrsi...whatever")
+parser.add_argument('exchange', help="binance/bittrex")
+args = parser.parse_args()
 
+search_method_map = {
+    "search_ema_daily": search_ema_daily,
+    "search_ema_hourly": search_ema_hourly,
+    "search_rsi_increasing_all_timeframes": search_rsi_increasing_all_timeframes,
+    "search_stochrsi_oversold_all_timeframes": search_stochrsi_oversold_all_timeframes
+}
+
+pool = Pool()
 """
 pool.map() only supports (func, arg)
 pool.starmap() supports (func, (as many args as you want in a tuple))
 """
 pairs_exchange = [(p, args.exchange) for p in Data().pairs(args.exchange)]
-pool.starmap(search_ema_daily, pairs_exchange)
+pool.starmap(search_method_map[args.search_method], pairs_exchange)
