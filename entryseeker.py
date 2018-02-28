@@ -6,10 +6,32 @@ from multiprocessing import Pool
 
 
 def search_ema_daily(pair, exchange):
+    """
+    Find recent bullish crosses (recent being < 10 days ago)
+    Remember to take the market condition and type of coin into account.
+    Finds these kinds of coins:
+    1. pumps that are just about to dump (look at the slope)
+    2. pumps in the process of dumping
+    3. gradual, weak bullish crosses that'll peter out soon
+    4. gradual small bullish crosses that'll could become something big
+    """
     coin = Coin(pair, exchange)
     bullish_cross, days_ago = coin.ema_bullish_cross(timeframe="1d", fast_period=9, slow_period=26)
     if bullish_cross and days_ago <= 10:
         print(coin.pair, "({})".format(coin.exchange), "EMA 9-26 bullish cross {} days ago".format(days_ago))
+
+
+def search_ema_daily_mature(pair, exchange):
+    """
+    Finds older bullish crosses that are probably a stronger upwards trend.
+    1. Bullruns that are just about to end
+    2. Pumps that are slowly dying out
+    3. Look for the ones that haven't increased so much since then, and are slowly rising.
+    """
+    coin = Coin(pair, exchange)
+    bullish_cross, days_ago = coin.ema_bullish_cross(timeframe="1d", fast_period=9, slow_period=26)
+    if bullish_cross and (8 <= days_ago <= 20):
+        print(coin.pair, "({})".format(coin.exchange), "EMA 9-26 bullish cross, confirmed by {} days".format(days_ago))
 
 
 def search_ema_hourly(pair, exchange):
@@ -40,6 +62,7 @@ args = parser.parse_args()
 
 search_method_map = {
     "search_ema_daily": search_ema_daily,
+    "search_ema_daily_mature": search_ema_daily_mature,
     "search_ema_hourly": search_ema_hourly,
     "search_rsi_increasing_all_timeframes": search_rsi_increasing_all_timeframes,
     "search_stochrsi_oversold_all_timeframes": search_stochrsi_oversold_all_timeframes
