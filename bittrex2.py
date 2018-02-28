@@ -32,11 +32,12 @@ def slash_to_dash(m):
 
 def get(m, period='day'):
     url = 'https://bittrex.com/Api/v2.0/pub/market/GetTicks?marketName={}&tickInterval={}'
-    try:
+
+    resp = {}
+    while resp.get("result") is None:
         resp = requests.get(url.format(m, period)).json()
-    except Exception as e:
-        import ipdb
-        ipdb.set_trace()
+        if resp["result"] is None:
+            print("bittrex fucked up")
 
     # Bittrex returns each candle as {"T": ..., "O": ...}
     # We want it in our own format that'll be the same across all exchanges.
