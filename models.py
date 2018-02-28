@@ -26,9 +26,9 @@ class Coin:
     def __repr__(self):
         return self.pair
 
-    def emafast_over_emaslow_daily(self):
-        ema_fast = EMA(self.tf["1d"].close.as_matrix(), 9)
-        ema_slow = EMA(self.tf["1d"].close.as_matrix(), 26)
+    def ema_bullish_cross(self, timeframe="1d", fast_period=9, slow_period=26):
+        ema_fast = EMA(self.tf[timeframe].close.as_matrix(), fast_period)
+        ema_slow = EMA(self.tf[timeframe].close.as_matrix(), slow_period)
 
         # If EMA9 > EMA26, find out when the bullish cross happened
         if ema_fast[-1] > ema_slow[-1]:
@@ -50,4 +50,14 @@ class Coin:
             rsi_timeframe = RSI(self.tf[i].close.as_matrix())[-period:]
             results.append(is_increasing(rsi_timeframe))
 
+        return all(results)
+
+    def stochrsi_oversold_all_timeframes(self):
+        """
+        TA-LIB STOCHRSI doesn't give the same results as Tradingview.
+        """
+        results = []
+        for i in list(self.tf.keys()):
+            k, d = STOCHRSI(self.tf[i].close.as_matrix(), timeperiod=14, fastk_period=3, fastd_period=3)
+            results.append(d[-1] < 20)
         return all(results)
